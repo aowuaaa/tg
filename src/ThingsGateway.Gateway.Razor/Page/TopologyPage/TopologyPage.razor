@@ -1,0 +1,117 @@
+﻿@page "/gateway/topology"
+@attribute [Authorize]
+@attribute [RolePermission]
+@inherits ComponentDefault
+@implements IDisposable
+@using ThingsGateway.Admin.Application
+@using ThingsGateway.Admin.Razor
+@using ThingsGateway.Gateway.Application
+@namespace ThingsGateway.Gateway.Razor
+
+<div class="gw-wall">
+    <div class="wall-glow"></div>
+
+    <div class="wall-head">
+        <div class="wall-head-left">
+            <span class="sys-lamp"></span>
+            <span class="sys-text">@(GatewayLocalizer!["Running"])</span>
+            <span class="sys-time">@_now.ToString("yyyy-MM-dd HH:mm:ss")</span>
+        </div>
+
+        <div class="wall-title">
+            <span class="title-line"></span>
+            <h3>@(GatewayLocalizer!["DeviceWallTitle"])</h3>
+            <span class="title-line"></span>
+        </div>
+
+        <div class="wall-tools">
+            <button type="button" class="tool-btn @(_onlyAbnormal ? "is-active" : null)" @onclick="ToggleOnlyAbnormal">
+                <i class="fa-solid fa-filter"></i>
+                <span>@(GatewayLocalizer!["OnlyAbnormal"])</span>
+            </button>
+            <button type="button" class="tool-btn" @onclick="RefreshAsync">
+                <i class="fa-solid fa-rotate"></i>
+                <span>@(GatewayLocalizer!["Refresh"])</span>
+            </button>
+        </div>
+    </div>
+
+    <div class="wall-summary">
+        <div class="summary-pill is-running">
+            <span class="pill-dot"></span>
+            <span class="pill-text">@(GatewayLocalizer!["Running"])</span>
+            <b>@_runningCount</b>
+        </div>
+        <div class="summary-pill is-fault">
+            <span class="pill-dot"></span>
+            <span class="pill-text">@(GatewayLocalizer!["Fault"])</span>
+            <b>@_faultCount</b>
+        </div>
+        <div class="summary-pill is-maintenance">
+            <span class="pill-dot"></span>
+            <span class="pill-text">@(GatewayLocalizer!["Maintenance"])</span>
+            <b>@_maintenanceCount</b>
+        </div>
+        <div class="summary-pill is-stopped">
+            <span class="pill-dot"></span>
+            <span class="pill-text">@(GatewayLocalizer!["Stopped"])</span>
+            <b>@_stoppedCount</b>
+        </div>
+    </div>
+
+    <div class="wall-body">
+        @if (_loading)
+        {
+            <div class="wall-empty">
+                <i class="fa-solid fa-spinner fa-spin"></i>
+            </div>
+        }
+        else if (Rows.Count == 0)
+        {
+            <div class="wall-empty">
+                <i class="fa-solid fa-box-open"></i>
+                <span>@(GatewayLocalizer!["TopologyEmptyTip"])</span>
+            </div>
+        }
+        else
+        {
+            @foreach (var row in Rows)
+            {
+                <div class="wall-row">
+                    <div class="row-devices" style="--cols:@_columns">
+                        @foreach (var item in row)
+                        {
+                            <button type="button" class="device-node @item.StatusClass" title="@item.Tooltip" @onclick="() => ShowDeviceDetailAsync(item)">
+                                <div class="node-head">
+                                    <span class="lamp"></span>
+                                    <span class="node-state">@(GatewayLocalizer![item.StatusKey])</span>
+                                    <span class="sub-lamp @item.LampClass"></span>
+                                    <span class="node-count">@item.VariableTotal</span>
+                                </div>
+                                <div class="node-stage">
+                                    <span class="stage-ring"></span>
+                                    <span class="stage-ring is-inner"></span>
+                                    <i class="@item.Icon"></i>
+                                </div>
+                                <div class="node-label">
+                                    <span class="node-name">@item.Name</span>
+                                    <span class="node-meta">@item.VariableOnline/@item.VariableTotal</span>
+                                </div>
+                            </button>
+                        }
+                    </div>
+
+                    <div class="row-rail" style="--cols:@_columns">
+                        @for (var i = 0; i < row.Count; i++)
+                        {
+                            <span class="rail-cell">
+                                <span class="rail-stem"></span>
+                                <span class="rail-node"></span>
+                            </span>
+                        }
+                    </div>
+                </div>
+            }
+        }
+    </div>
+</div>

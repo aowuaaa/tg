@@ -1,0 +1,82 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<Import Project="..\..\PackNuget.props" />
+
+	<PropertyGroup>
+		<TargetFrameworks>net8.0;$(OtherTargetFrameworks);</TargetFrameworks>
+
+	</PropertyGroup>
+	<ItemGroup>
+		<PackageReference Include="Portable.BouncyCastle" Version="1.9.0" />
+		<PackageReference Include="Riok.Mapperly" Version="4.3.1" ExcludeAssets="runtime" PrivateAssets="all" />
+
+		<PackageReference Include="Rougamo.Fody" Version="5.0.2" />
+		<PackageReference Include="TouchSocket.Dmtp" Version="$(TouchSocketVersion)" />
+		<PackageReference Include="TouchSocket.WebApi" Version="$(TouchSocketVersion)" />
+	</ItemGroup>
+
+	<!--<ItemGroup>
+		<Content Remove="SeedData\Gateway\*.json" />
+		<Content Include="SeedData\Gateway\*.json" Pack="true" PackagePath="\Content\SeedData\Gateway\">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+
+		<Content Remove="SeedData\Management\*.json" />
+		<Content Include="SeedData\Management\*.json" Pack="true" PackagePath="\Content\SeedData\Management\">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+
+		<Content Remove="SeedData\RulesEngine\*.json" />
+		<Content Include="SeedData\RulesEngine\*.json" Pack="true" PackagePath="\Content\SeedData\RulesEngine\">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+
+	</ItemGroup>-->
+
+
+	<ItemGroup>
+		<Content Remove="SeedData\Gateway\*.json" />
+		<EmbeddedResource Include="SeedData\Gateway\*.json" />
+		<Content Remove="SeedData\Management\*.json" />
+		<EmbeddedResource Include="SeedData\Management\*.json" />
+		<Content Remove="SeedData\RulesEngine\*.json" />
+		<EmbeddedResource Include="SeedData\RulesEngine\*.json" />
+	</ItemGroup>
+	
+
+	<ItemGroup>
+		<Content Remove="Locales\*.json" />
+		<EmbeddedResource Include="Locales\*.json">
+			<CopyToOutputDirectory>Never</CopyToOutputDirectory>
+		</EmbeddedResource>
+	</ItemGroup>
+
+
+	<ItemGroup Condition=" ! $([System.String]::Copy('$(SolutionName)').StartsWith('ThingsGatewayAll'))">
+		<PackageReference Include="ThingsGateway.Admin.Application" Version="$(AdminVersion)" />
+		<PackageReference Include="ThingsGateway.Blazor.Diagrams.Core" Version="$(AdminVersion)" />
+		<PackageReference Include="ThingsGateway.CSScript" Version="$(FoundationVersion)" />
+		<PackageReference Include="ThingsGateway.Foundation" Version="$(FoundationVersion)" />
+	</ItemGroup>
+
+	<ItemGroup Condition=" $([System.String]::Copy('$(SolutionName)').StartsWith('ThingsGatewayAll'))">
+		<ProjectReference Include="..\..\..\ThingsGateway.Foundation\src\ThingsGateway.Foundation\ThingsGateway.Foundation.csproj" />
+		<ProjectReference Include="..\..\..\ThingsGateway.Foundation\src\ThingsGateway.CSScript\ThingsGateway.CSScript.csproj" />
+		<ProjectReference Include="..\..\..\ThingsGateway.Admin\src\ThingsGateway.Admin.Application\ThingsGateway.Admin.Application.csproj" />
+		<ProjectReference Include="..\..\..\ThingsGateway.Admin\src\ThingsGateway.Blazor.Diagrams.Core\ThingsGateway.Blazor.Diagrams.Core.csproj" />
+	</ItemGroup>
+
+
+	<ItemGroup Condition="'$(SolutionName)' != 'ThingsGatewayAll'">
+		<PackageReference Include="ThingsGateway.Authentication" Version="$(ManagementVersion)" />
+	</ItemGroup>
+	<ItemGroup Condition="'$(SolutionName)' == 'ThingsGatewayAll'">
+		<ProjectReference Include="..\..\..\ThingsGateway.Management\src\ThingsGateway.Authentication\ThingsGateway.Authentication.csproj" />
+	</ItemGroup>
+
+	<ItemGroup Condition="'$(TargetFramework)'=='net8.0'">
+		<PackageReference Include="System.Linq.Async" Version="7.0.1" />
+	</ItemGroup>
+
+
+</Project>

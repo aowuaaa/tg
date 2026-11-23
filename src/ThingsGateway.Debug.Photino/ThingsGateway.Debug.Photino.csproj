@@ -1,0 +1,86 @@
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+
+	<PropertyGroup>
+		<SatelliteResourceLanguages>zh-Hans;en-US</SatelliteResourceLanguages>
+		<OutputType>WinExe</OutputType>
+		<ApplicationIcon>favicon.ico</ApplicationIcon>
+		<TargetFrameworks>net8.0;$(OtherTargetFrameworks);</TargetFrameworks>
+		
+		<CETCompat>false</CETCompat>
+		<ServerGarbageCollection>true</ServerGarbageCollection>
+		<!--动态适用GC-->
+		<GarbageCollectionAdaptationMode>1</GarbageCollectionAdaptationMode>
+
+	</PropertyGroup>
+
+	<ItemGroup>
+		<Content Update="wwwroot\**">
+			<CopyToOutputDirectory>Always</CopyToOutputDirectory>
+		</Content>
+	</ItemGroup>
+
+	<ItemGroup>
+		<Content Remove="Locales\*.json" />
+		<EmbeddedResource Include="Locales\*.json">
+			<CopyToOutputDirectory>Never</CopyToOutputDirectory>
+		</EmbeddedResource>
+	</ItemGroup>
+
+	<ItemGroup>
+		<None Update="logo.svg">
+			<CopyToOutputDirectory>Never</CopyToOutputDirectory>
+			<ExcludeFromSingleFile>true</ExcludeFromSingleFile>
+			<CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+		</None>
+		<None Remove="favicon.ico" />
+		<Content Include="favicon.ico">
+		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+	</ItemGroup>
+
+
+	<ItemGroup Condition=" ! $([System.String]::Copy('$(SolutionName)').StartsWith('ThingsGatewayAll'))">
+		<PackageReference Include="ThingsGateway.Photino.Blazor" Version="$(AdminVersion)" />
+		<PackageReference Include="ThingsGateway.Debug.Razor" Version="$(PluginVersion)" />
+	</ItemGroup>
+	<ItemGroup Condition=" $([System.String]::Copy('$(SolutionName)').StartsWith('ThingsGatewayAll'))">
+		<ProjectReference Include="..\..\..\ThingsGateway.Admin\src\ThingsGateway.Photino.Blazor\ThingsGateway.Photino.Blazor.csproj" />
+		<ProjectReference Include="..\..\..\ThingsGateway.Plugin\src\ThingsGateway.Debug.Razor\ThingsGateway.Debug.Razor.csproj" />
+	</ItemGroup>
+	<ItemGroup Condition="'$(SolutionName)' != 'ThingsGatewayAll'">
+		<PackageReference Include="ThingsGateway.Debug.ProRazor" Version="$(ProPluginVersion)" />
+	</ItemGroup>
+	<ItemGroup Condition="'$(SolutionName)' == 'ThingsGatewayAll'">
+		<ProjectReference Include="..\..\..\ThingsGateway.ProPlugin\src\ThingsGateway.Debug.ProRazor\ThingsGateway.Debug.ProRazor.csproj" />
+	</ItemGroup>
+	
+	<ItemGroup>
+		<None Remove="README.md" />
+		<EmbeddedResource Include="README.md" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<PackageReference Include="BootstrapBlazor.CherryMarkdown" Version="10.0.1" />
+	</ItemGroup>
+
+	<ItemGroup Condition=" '$(TargetFramework)' == 'net8.0' ">
+		<PackageReference Include="Microsoft.AspNetCore.Components.WebView" Version="$(NET8Version)" />
+	</ItemGroup>
+	<ItemGroup Condition=" '$(TargetFramework)' == 'net10.0' ">
+		<PackageReference Include="Microsoft.AspNetCore.Components.WebView" Version="$(NET10Version)" />
+	</ItemGroup>
+	<ItemGroup>
+		<Content Update="appsettings.json">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+			<ExcludeFromSingleFile>true</ExcludeFromSingleFile>
+			<CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+		</Content>
+		<Content Update="Configuration\Menu.json">
+		  <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+		<Content Update="Configuration\MenuPro.json">
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Content>
+	</ItemGroup>
+
+</Project>

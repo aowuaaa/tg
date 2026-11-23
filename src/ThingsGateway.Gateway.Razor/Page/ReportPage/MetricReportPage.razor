@@ -1,0 +1,240 @@
+﻿@page "/gateway/metricreport"
+@attribute [Authorize]
+@attribute [RolePermission]
+@inherits ComponentDefault
+@namespace ThingsGateway.Gateway.Razor
+@using ThingsGateway.Admin.Application
+@using ThingsGateway.Admin.Razor
+
+<div class="mr-page">
+    <div class="mr-panel mr-filter">
+        <div class="mr-row">
+            <div class="mr-field">
+                <span class="mr-label">@(GatewayLocalizer!["TimeRange"])</span>
+                <div class="mr-range">
+                    <input type="datetime-local" step="60" class="mr-input" value="@_startTimeText" @onchange="OnStartTimeChanged" />
+                    <span class="mr-split">~</span>
+                    <input type="datetime-local" step="60" class="mr-input" value="@_endTimeText" @onchange="OnEndTimeChanged" />
+                </div>
+            </div>
+            <div class="mr-quick">
+                <button type="button" class="mr-chip" @onclick="() => SetRange(0)">@(GatewayLocalizer!["Today"])</button>
+                <button type="button" class="mr-chip" @onclick="() => SetRange(1)">@(GatewayLocalizer!["Yesterday"])</button>
+                <button type="button" class="mr-chip" @onclick="() => SetRange(7)">@(GatewayLocalizer!["Last7Days"])</button>
+                <button type="button" class="mr-chip" @onclick="() => SetRange(30)">@(GatewayLocalizer!["Last30Days"])</button>
+                <button type="button" class="mr-chip" @onclick="SetThisMonth">@(GatewayLocalizer!["ThisMonth"])</button>
+            </div>
+        </div>
+
+        <div class="mr-row mr-row-top">
+            <div class="mr-field mr-field-block">
+                <span class="mr-label">
+                    @(GatewayLocalizer!["DeviceScope"])
+                    <em>@(_devices.Count(a => a.Selected))/@_devices.Count</em>
+                </span>
+                <div class="mr-search">
+                    <input type="text" class="mr-input" placeholder="@(GatewayLocalizer!["SearchDevice"])" @bind="_deviceSearch" @bind:event="oninput" />
+                    <button type="button" class="mr-chip" @onclick="() => SelectAllDevices(true)">@(GatewayLocalizer!["SelectAll"])</button>
+                    <button type="button" class="mr-chip" @onclick="() => SelectAllDevices(false)">@(GatewayLocalizer!["Clear"])</button>
+                </div>
+                <div class="mr-check-list">
+                    @foreach (var item in VisibleDevices)
+                    {
+                        <label class="mr-check @(item.Selected ? "is-checked" : null)">
+                            <input type="checkbox" @bind="item.Selected" />
+                            <span>@item.Name</span>
+                        </label>
+                    }
+                </div>
+            </div>
+
+            <div class="mr-field mr-field-block">
+                <span class="mr-label">
+                    @(GatewayLocalizer!["MetricScope"])
+                    <em>@(_metrics.Count(a => a.Selected))/@_metrics.Count</em>
+                </span>
+                <div class="mr-search">
+                    <button type="button" class="mr-chip" @onclick="() => SelectAllMetrics(true)">@(GatewayLocalizer!["SelectAll"])</button>
+                    <button type="button" class="mr-chip" @onclick="() => SelectAllMetrics(false)">@(GatewayLocalizer!["Clear"])</button>
+                </div>
+                <div class="mr-check-list">
+                    @foreach (var item in _metrics)
+                    {
+                        <label class="mr-check @(item.Selected ? "is-checked" : null)">
+                            <input type="checkbox" @bind="item.Selected" />
+                            <span>@item.Name</span>
+                            @if (!string.IsNullOrEmpty(item.Unit))
+                            {
+                                <i>@item.Unit</i>
+                            }
+                        </label>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <div class="mr-actions">
+            <button type="button" class="mr-btn is-primary" disabled="@_busy" @onclick="PreviewAsync">
+                <i class="fa-solid fa-play"></i>
+                <span>@(GatewayLocalizer!["Preview"])</span>
+            </button>
+            <button type="button" class="mr-btn" disabled="@(_busy || _exporting)" @onclick="ExportAsync">
+                <i class="fa-solid fa-file-excel"></i>
+                <span>@(GatewayLocalizer!["ExportExcel"])</span>
+            </button>
+            <button type="button" class="mr-btn" disabled="@(_busy || _savingMetricConfig)" @onclick="OpenMetricConfig">
+                <i class="fa-solid fa-sliders"></i>
+                <span>@(GatewayLocalizer!["MetricConfig"])</span>
+            </button>
+            @if (_busy)
+            {
+                <span class="mr-tip"><i class="fa-solid fa-spinner fa-spin"></i> @(GatewayLocalizer!["Loading"])</span>
+            }
+            else if (_result != null)
+            {
+                <span class="mr-tip">
+                    @(GatewayLocalizer!["DeviceCount"]): @_result.Devices.Count
+                    · @(GatewayLocalizer!["MetricCount"]): @_result.Rows.Count
+                </span>
+            }
+        </div>
+
+        @if (_messages.Count > 0)
+        {
+            <div class="mr-messages">
+                @foreach (var message in _messages)
+                {
+                    <div class="mr-message"><i class="fa-solid fa-circle-info"></i><span>@message</span></div>
+                }
+            </div>
+        }
+    </div>
+
+    <div class="mr-panel mr-result">
+        @if (_result == null || _result.Rows.Count == 0)
+        {
+            <div class="mr-empty">
+                <i class="fa-solid fa-table-list"></i>
+                <span>@(GatewayLocalizer!["ReportEmptyTip"])</span>
+            </div>
+        }
+        else
+        {
+            <div class="mr-table-wrap">
+                <table class="mr-table">
+                    <thead>
+                        <tr>
+                            <th class="c1">@(GatewayLocalizer!["Group"])</th>
+                            <th class="c2">@(GatewayLocalizer!["Metric"])</th>
+                            <th class="c3">@(GatewayLocalizer!["Unit"])</th>
+                            @foreach (var device in _result.Devices)
+                            {
+                                <th class="cdev" title="@device.Name">@device.Name</th>
+                            }
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var row in _result.Rows)
+                        {
+                            <tr>
+                                <td class="c1">@row.GroupName</td>
+                                <td class="c2">@row.Name</td>
+                                <td class="c3">@row.Unit</td>
+                                @for (var i = 0; i < _result.Devices.Count; i++)
+                                {
+                                    var text = i < row.Displays.Count ? row.Displays[i] : string.Empty;
+                                    <td class="cnum">@text</td>
+                                }
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+
+    @if (_metricConfigOpen)
+    {
+        <div class="mr-modal">
+            <div class="mr-modal-dialog">
+                <div class="mr-modal-head">
+                    <span><i class="fa-solid fa-sliders"></i> @(GatewayLocalizer!["MetricConfig"])</span>
+                    <button type="button" class="mr-icon-btn" disabled="@_savingMetricConfig" @onclick="CloseMetricConfig">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+                <div class="mr-modal-body">
+                    <div class="mr-tip">@(GatewayLocalizer!["MetricConfigTip"])</div>
+                    @if (_messages.Count > 0)
+                    {
+                        <div class="mr-messages">
+                            @foreach (var message in _messages)
+                            {
+                                <div class="mr-message"><i class="fa-solid fa-circle-info"></i><span>@message</span></div>
+                            }
+                        </div>
+                    }
+                    <div class="mr-table-wrap">
+                        <table class="mr-table mr-config-table">
+                            <thead>
+                                <tr>
+                                    <th class="cn-name">@(GatewayLocalizer!["Metric"])</th>
+                                    <th class="cn-group">@(GatewayLocalizer!["Group"])</th>
+                                    <th class="cn-type">@(GatewayLocalizer!["MetricType"])</th>
+                                    <th class="cn-var">@(GatewayLocalizer!["VariableName"])</th>
+                                    <th class="cn-dev">@(GatewayLocalizer!["DeviceName"])</th>
+                                    <th class="cn-state">@(GatewayLocalizer!["StateValue"])</th>
+                                    <th class="cn-unit">@(GatewayLocalizer!["Unit"])</th>
+                                    <th class="cn-dec">@(GatewayLocalizer!["Decimals"])</th>
+                                    <th class="cn-sort">@(GatewayLocalizer!["SortCode"])</th>
+                                    <th class="cn-visible">@(GatewayLocalizer!["Visible"])</th>
+                                    <th class="cn-op"></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var item in _metricConfigs)
+                                {
+                                    <tr class="@(item.Removed ? "is-removed" : null)">
+                                        <td class="cn-name"><input type="text" class="mr-input" @bind="item.Name" /></td>
+                                        <td class="cn-group"><input type="text" class="mr-input" @bind="item.GroupName" /></td>
+                                        <td class="cn-type">
+                                            <select class="mr-input" @bind="item.MetricType">
+                                                @foreach (var type in MetricTypes)
+                                                {
+                                                    <option value="@type">@GetMetricTypeName(type)</option>
+                                                }
+                                            </select>
+                                        </td>
+                                        <td class="cn-var"><input type="text" class="mr-input" @bind="item.VariableName" /></td>
+                                        <td class="cn-dev"><input type="text" class="mr-input" @bind="item.DeviceNames" /></td>
+                                        <td class="cn-state"><input type="text" class="mr-input" @bind="item.StateValue" /></td>
+                                        <td class="cn-unit"><input type="text" class="mr-input" @bind="item.Unit" /></td>
+                                        <td class="cn-dec"><input type="number" min="0" max="6" class="mr-input" @bind="item.Decimals" /></td>
+                                        <td class="cn-sort"><input type="number" class="mr-input" @bind="item.SortCode" /></td>
+                                        <td class="cn-visible"><input type="checkbox" @bind="item.Visible" /></td>
+                                        <td class="cn-op">
+                                            <button type="button" class="mr-chip" disabled="@_savingMetricConfig" @onclick="() => ToggleRemoveMetric(item)">
+                                                @(GatewayLocalizer![item.Removed ? "Restore" : "Delete"])
+                                            </button>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="mr-modal-foot">
+                    <button type="button" class="mr-chip" disabled="@_savingMetricConfig" @onclick="AddMetricConfig">
+                        <i class="fa-solid fa-plus"></i> @(GatewayLocalizer!["Add"])
+                    </button>
+                    <span class="mr-grow"></span>
+                    <button type="button" class="mr-btn" disabled="@_savingMetricConfig" @onclick="CloseMetricConfig">@(GatewayLocalizer!["Cancel"])</button>
+                    <button type="button" class="mr-btn is-primary" disabled="@_savingMetricConfig" @onclick="SaveMetricConfigsAsync">
+                        <i class="fa-solid fa-floppy-disk"></i>
+                        <span>@(GatewayLocalizer!["Save"])</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    }
+</div>
