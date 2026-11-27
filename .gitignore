@@ -364,3 +364,7 @@ FodyWeavers.xsd
 
 
 *DB/
+
+# 例外：下面两个源码目录名以 DB 结尾，不能当成数据库输出目录忽略
+!src/ThingsGateway.Gateway.Application/Driver/CacheDB/
+!src/ThingsGateway.Gateway.Application/Driver/Business/DB/
